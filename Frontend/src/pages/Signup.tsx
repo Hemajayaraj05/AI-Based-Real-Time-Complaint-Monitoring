@@ -1,8 +1,7 @@
-import React, { useState, ChangeEvent, FormEvent } from "react";
-import "../assets/css/Signup.css";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
-/* 🔹 Types */
+/* ---------- TYPES ---------- */
 interface SignupForm {
   name: string;
   email: string;
@@ -33,7 +32,8 @@ const Signup: React.FC = () => {
 
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+  /* ---------- HANDLERS ---------- */
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
 
     setForm((prev) => ({
@@ -61,79 +61,77 @@ const Signup: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitted(true);
-
     if (validate()) {
       alert("Signup Successful ✔");
     }
   };
 
   const showError = (field: keyof FormErrors) =>
-    submitted && errors[field];
+    submitted && Boolean(errors[field]);
 
-  const inputStyle = (field: keyof FormErrors) =>
-    showError(field) ? { border: "1px solid red" } : {};
-
-  const placeholderText = (
-    field: keyof FormErrors,
-    normal: string
-  ) => (showError(field) ? errors[field] : normal);
+  const inputClass = (field: keyof FormErrors) =>
+    `w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 ${
+      showError(field)
+        ? "border-red-500 focus:ring-red-400"
+        : "border-gray-300 focus:ring-indigo-500"
+    }`;
 
   const handleGoogleSignup = () => {
     window.location.href = "https://accounts.google.com/";
   };
 
   return (
-    <div className="signup-container">
-      <div className="signup-card">
-        <div className="signup-left">
-          <h2>Create Account</h2>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-900 to-purple-800 px-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex overflow-hidden">
+        {/* LEFT */}
+        <div className="hidden md:flex w-1/2 bg-indigo-700 text-white items-center justify-center">
+          <h2 className="text-3xl font-bold">Create Account</h2>
         </div>
 
-        <div className="signup-right">
-          <div className="social-buttons">
-            <button
-              className="google"
-              onClick={handleGoogleSignup}
-              style={{ transition: "0.3s" }}
-              onMouseOver={(e) =>
-                ((e.target as HTMLButtonElement).style.background = "#4285F4")
-              }
-              onMouseOut={(e) =>
-                ((e.target as HTMLButtonElement).style.background = "#f1f1f1")
-              }
-            >
-              Sign up with Google
-            </button>
-          </div>
+        {/* RIGHT */}
+        <div className="w-full md:w-1/2 p-8">
+          {/* Google Signup */}
+          <button
+            onClick={handleGoogleSignup}
+            className="w-full bg-gray-100 hover:bg-blue-500 hover:text-white transition-all py-2 rounded-lg font-medium mb-4"
+          >
+            Sign up with Google
+          </button>
 
-          <p className="or">or sign up using your email</p>
+          <p className="text-center text-gray-500 mb-4">
+            or sign up using your email
+          </p>
 
-          <form onSubmit={handleSubmit} noValidate>
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <input
               name="name"
               value={form.name}
               onChange={handleChange}
-              placeholder={placeholderText("name", "Name")}
-              style={inputStyle("name")}
+              placeholder={showError("name") ? errors.name : "Name"}
+              className={inputClass("name")}
             />
 
             <input
               name="email"
               value={form.email}
               onChange={handleChange}
-              placeholder={placeholderText("email", "Email")}
-              style={inputStyle("email")}
+              placeholder={showError("email") ? errors.email : "Email"}
+              className={inputClass("email")}
             />
 
             <input
               name="regNumber"
               value={form.regNumber}
               onChange={handleChange}
-              placeholder={placeholderText("regNumber", "Register Number")}
-              style={inputStyle("regNumber")}
+              placeholder={
+                showError("regNumber")
+                  ? errors.regNumber
+                  : "Register Number"
+              }
+              className={inputClass("regNumber")}
             />
 
             <input
@@ -141,51 +139,64 @@ const Signup: React.FC = () => {
               name="password"
               value={form.password}
               onChange={handleChange}
-              placeholder={placeholderText("password", "Password")}
-              style={inputStyle("password")}
+              placeholder={
+                showError("password") ? errors.password : "Password"
+              }
+              className={inputClass("password")}
             />
 
-            <div className="terms">
+            <div className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 name="agree"
                 checked={form.agree}
                 onChange={handleChange}
               />
-              <span onClick={() => setShowPopup(true)}>
+              <span
+                onClick={() => setShowPopup(true)}
+                className="cursor-pointer text-indigo-600 hover:underline"
+              >
                 I agree to Terms & Privacy Policy
               </span>
             </div>
 
             <button
-              className="signup-btn"
               type="submit"
-              style={{ transition: "0.3s" }}
-              onMouseOver={(e) =>
-                ((e.target as HTMLButtonElement).style.background = "#5f7cff")
-              }
-              onMouseOut={(e) =>
-                ((e.target as HTMLButtonElement).style.background = "#2b1055")
-              }
+              className="w-full bg-indigo-700 hover:bg-indigo-600 transition-all text-white py-2 rounded-lg font-semibold"
             >
               Sign up
             </button>
           </form>
 
-          <p className="login-text">
-            Already have an account? <Link to="/login">Log in</Link>
+          <p className="text-center text-sm mt-4">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="text-indigo-700 font-semibold hover:underline"
+            >
+              Log in
+            </Link>
           </p>
         </div>
       </div>
 
+      {/* POPUP */}
       {showPopup && (
-        <div className="popup-overlay">
-          <div className="popup-box">
-            <h3>Terms & Privacy Policy</h3>
-            <p>
-              Welcome to our platform... {/* (content unchanged) */}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl w-full max-w-lg">
+            <h3 className="text-lg font-bold mb-2">
+              Terms & Privacy Policy
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              By creating an account, you agree to our Terms & Privacy
+              Policy. Your data is secure and never shared.
             </p>
-            <button onClick={() => setShowPopup(false)}>Close</button>
+            <button
+              onClick={() => setShowPopup(false)}
+              className="bg-indigo-700 text-white px-4 py-2 rounded-lg"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
@@ -194,5 +205,3 @@ const Signup: React.FC = () => {
 };
 
 export default Signup;
-
-
