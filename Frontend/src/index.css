@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+
 @keyframes confetti {
   0% {
     transform: translateY(0) rotate(0);
