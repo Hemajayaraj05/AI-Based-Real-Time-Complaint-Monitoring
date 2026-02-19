@@ -1,20 +1,32 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-export type UserRole = "student" | "teacher" | "admin";
+export type UserRole = "student" | "admin" | "division_head" | "electrician" | "cleanliness_manager" | "faculty" | "hostel_manager" | "librarian" | "cafeteria_manager" | "exam_coordinator" | "security";
+
+export type Division =
+  | "cleanliness"
+  | "water"
+  | "electricity"
+  | "hostel"
+  | "transport"
+  | "library"
+  | "food"
+  | "infrastructure"
+  | "other";
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  department: string;
+  department?: string;
   role: UserRole;
+  division?: Division; // For division heads
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string, department: string, role: UserRole) => Promise<void>;
+  signup: (name: string, email: string, password: string, department: string, role: UserRole, division?: Division) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -39,27 +51,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Mock signup - in future replace with API call
-  const signup = async (name: string, email: string, password: string, department: string, role: UserRole) => {
+  const signup = async (
+    name: string, 
+    email: string, 
+    password: string, 
+    department: string, 
+    role: UserRole, 
+    division?: Division
+  ) => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const res = await fetch("http://localhost:4000/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password, department, role, division }),
+      });
 
-      // Mock user creation
-      const newUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        name,
-        email,
-        department,
-        role,
-      };
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Signup failed");
+      }
 
-      // Store user in localStorage (mock backend)
-      localStorage.setItem("user", JSON.stringify(newUser));
-      localStorage.setItem("authToken", "mock-token-" + Date.now());
-      setUser(newUser);
-    } catch (error) {
-      throw new Error("Signup failed");
+      const data = await res.json();
+      if (data?.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+        // backend does not return token on signup in current implementation
+        setUser(data.user);
+      }
+    } catch (error: any) {
+      throw new Error(error.message || "Signup failed");
     } finally {
       setIsLoading(false);
     }
@@ -69,31 +89,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (!email || !password) throw new Error("Email and password required");
 
-      // Mock authentication - in production this would validate against backend
-      if (!email || !password) {
-        throw new Error("Email and password required");
+      const res = await fetch("http://localhost:4000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload.message || "Login failed");
       }
 
-      // Mock users database
-      const mockUsers: User[] = [
-        { id: "1", name: "Rahul Kumar", email: "rahul@student.edu", department: "CSE", role: "student" },
-        { id: "2", name: "Prof. Sharma", email: "sharma@teacher.edu", department: "CSE", role: "teacher" },
-        { id: "3", name: "Admin", email: "admin@college.edu", department: "Admin", role: "admin" },
-      ];
-
-      const foundUser = mockUsers.find((u) => u.email === email);
-      if (!foundUser) {
-        throw new Error("Invalid credentials");
+      const { user: returnedUser, token } = payload;
+      if (!returnedUser || !token) {
+        throw new Error("Invalid server response");
       }
 
-      localStorage.setItem("user", JSON.stringify(foundUser));
-      localStorage.setItem("authToken", "mock-token-" + Date.now());
-      setUser(foundUser);
-    } catch (error) {
-      throw error;
+      localStorage.setItem("user", JSON.stringify(returnedUser));
+      localStorage.setItem("authToken", token);
+      setUser(returnedUser);
+    } catch (error: any) {
+      throw new Error(error.message || "Login failed");
     } finally {
       setIsLoading(false);
     }

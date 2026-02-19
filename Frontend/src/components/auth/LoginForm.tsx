@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-
+import axios from "axios";
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
@@ -31,7 +31,9 @@ const LoginForm: React.FC = () => {
     }
 
     try {
+      // use AuthContext login so the global auth state is updated
       await login(formData.email, formData.password);
+      console.log("Login successful, navigating...");
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.message || "Login failed");

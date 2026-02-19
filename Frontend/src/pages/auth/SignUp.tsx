@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, UserRole } from "../../context/AuthContext";
-
+import axios from "axios";
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
@@ -39,13 +39,13 @@ const Signup: React.FC = () => {
     }
 
     try {
-      await signup(
-        formData.name,
-        formData.email,
-        formData.password,
-        formData.department,
-        formData.role
-      );
+      await axios.post("http://localhost:4000/api/auth/signup", {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      department: formData.department,
+      role: formData.role,
+    });
       navigate("/login");
     } catch (err: any) {
       setError(err.message || "Signup failed");
@@ -57,7 +57,7 @@ const Signup: React.FC = () => {
       <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
         
         {/* LEFT IMAGE PANEL */}
-        <div className="hidden md:flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-600 p-10">
+        <div className="hidden md:flex items-center justify-center bg-linear-to-br from-purple-600 to-indigo-600 p-10">
            {/* <img src="/logo.png" className="w-16 mx-auto mb-3" /> */}
         </div>
 
@@ -121,7 +121,9 @@ const Signup: React.FC = () => {
                 <option value="ECE">Electronics</option>
                 <option value="EEE">Electrical</option>
                 <option value="MECH">Mechanical</option>
-                <option value="CIVIL">Civil</option>
+                <option value="CIVIL">Civil</option> 
+                <option value="IT">Information Technology</option>
+                <option value='others'>Others</option>
               </select>
             </div>
 
@@ -136,7 +138,14 @@ const Signup: React.FC = () => {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-white"
               >
                 <option value="student">Student</option>
-                <option value="teacher">Teacher</option>
+                <option value="faculty">Faculty</option>
+                <option value="electrician">Electrician</option>
+                <option value="cleanliness_manager">Cleanliness Manager</option>
+                <option value="hostel_manager">Hostel Manager</option>
+                <option value="librarian">Librarian</option>
+                <option value="cafeteria_manager">Cafeteria Manager</option>
+                <option value="exam_coordinator">Exam Coordinator</option>
+                <option value="security">Security</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
