@@ -45,7 +45,12 @@ const ComplaintAnalysisChart: React.FC = () => {
         });
         if (res.ok) {
           const result = await res.json();
+          console.log("Monthly analysis API response:", result);
           setChartData(result.data || []);
+        } else {
+          console.error("API responded with status:", res.status);
+          const error = await res.text();
+          console.error("API error:", error);
         }
       } catch (err) {
         console.error("Failed to fetch monthly analysis:", err);
@@ -122,6 +127,7 @@ const ComplaintAnalysisChart: React.FC = () => {
                 fill="#16a34a"
                 radius={[8, 8, 0, 0]}
                 animationDuration={800}
+                label={{ position: 'top', fill: '#1e293b', fontSize: 10 }}
               />
               <Bar
                 dataKey="pending"
@@ -129,6 +135,7 @@ const ComplaintAnalysisChart: React.FC = () => {
                 fill="#dc2626"
                 radius={[8, 8, 0, 0]}
                 animationDuration={800}
+                label={{ position: 'top', fill: '#1e293b', fontSize: 10 }}
               />
               <Bar
                 dataKey="in_progress"
@@ -136,6 +143,7 @@ const ComplaintAnalysisChart: React.FC = () => {
                 fill="#d97706"
                 radius={[8, 8, 0, 0]}
                 animationDuration={800}
+                label={{ position: 'top', fill: '#1e293b', fontSize: 10 }}
               />
             </BarChart>
           </ResponsiveContainer>

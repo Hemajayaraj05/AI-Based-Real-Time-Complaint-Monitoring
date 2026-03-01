@@ -1,4 +1,4 @@
-export type UserRole = "student" | "admin" | "division_head" | "electrician" | "cleanliness_manager" | "faculty" | "hostel_manager" | "librarian" | "cafeteria_manager" | "exam_coordinator" | "security";
+export type UserRole = "student" | "admin" | "division_head" | "electrician" | "cleanliness_manager" | "faculty" | "hostel_manager" | "librarian" | "cafeteria_manager" | "exam_coordinator" | "security" | "transport_manager";
 
 export type Division =
   | "cleanliness"

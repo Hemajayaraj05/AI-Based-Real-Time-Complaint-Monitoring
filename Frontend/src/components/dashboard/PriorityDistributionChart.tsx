@@ -56,11 +56,6 @@ const PriorityDistributionChart: React.FC = () => {
 
   const totalComplaints = data.reduce((sum, item) => sum + item.count, 0);
 
-  const renderCustomLabel = (entry: any) => {
-    const percent = ((entry.value / totalComplaints) * 100).toFixed(1);
-    return `${percent}%`;
-  };
-
   return (
     <section className="w-full">
       <div className="bg-white rounded-xl lg:rounded-2xl shadow p-6 lg:p-8 border border-purple-100">
@@ -89,7 +84,7 @@ const PriorityDistributionChart: React.FC = () => {
                   cx="50%"
                   cy="45%"
                   labelLine={false}
-                  label={{ fontSize: 11, fill: "#475569" }}
+                  label={({ value }) => value}
                   outerRadius={60}
                   fill="#8884d8"
                   dataKey="value"

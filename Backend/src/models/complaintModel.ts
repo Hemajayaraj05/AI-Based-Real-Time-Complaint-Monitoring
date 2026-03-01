@@ -37,6 +37,8 @@ export interface PublicComplaint {
   priority: ComplaintPriority;
   raised_by: string;
   raised_by_name?: string; // Only visible to admin
+  raised_by_email?: string; // Only visible to admin
+  raised_by_department?: string; // Only visible to admin
   assigned_to?: string | null;
   cluster_id?: string | null;
   similar_count?: number; // Number of similar complaints in cluster

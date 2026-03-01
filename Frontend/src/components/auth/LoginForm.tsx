@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import axios from "axios";
+import { showToast } from "../../utils/toast";
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
@@ -11,32 +11,29 @@ const LoginForm: React.FC = () => {
     password: "",
   });
 
-  const [error, setError] = useState("");
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-    setError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.email || !formData.password) {
-      setError("Please enter email and password");
+      showToast.error("Please enter email and password");
       return;
     }
 
     try {
       // use AuthContext login so the global auth state is updated
       await login(formData.email, formData.password);
-      console.log("Login successful, navigating...");
+      showToast.success("Login successful!");
       navigate("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Login failed");
+      showToast.error(err.message || "Login failed");
     }
   };
 
@@ -49,12 +46,6 @@ const LoginForm: React.FC = () => {
         </h1>
         <p className="text-gray-500 text-sm">Login Portal</p>
       </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-          {error}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

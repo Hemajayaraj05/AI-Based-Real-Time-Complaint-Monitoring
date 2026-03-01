@@ -20,6 +20,7 @@ severity_keywords = {
         "harassment", "ragging", "bullying", "assault", "abuse", "threat",
         "violence", "urgent", "critical", "severe", "emergency", "dangerous",
         "sexual", "discrimination", "immediate", "safety", "health risk",
+        "molest", "threat", "intimidat", "bully", "harass", "unwanted",
     ],
     "medium": [
         "delay", "problem", "broken", "issue", "not working", "faulty",
@@ -31,21 +32,21 @@ severity_keywords = {
     ],
 }
 
-# Division categorization keywords
+# Division categorization keywords with context-aware matching
 division_keywords = {
+    "electricity": [
+        "electricity", "power", "light", "bulb", "fan", "ac", "air condition",
+        "socket", "plug", "switch", "outage", "blackout", "voltage", "wiring",
+        "electrical", "generator", "circuit", "breaker", "wire", "shortcircuit",
+    ],
+    "water": [
+        "water tank", "water supply", "drinking water", "tap", "pipe",
+        "water pressure", "water shortage", "water system", "purifier", "filter",
+    ],
     "cleanliness": [
         "clean", "dirty", "garbage", "trash", "waste", "dustbin", "sweep",
         "sanitation", "hygiene", "mess", "smell", "stink", "toilet", "washroom",
         "bathroom", "litter", "filth",
-    ],
-    "water": [
-        "water", "tap", "pipe", "leak", "drinking water", "supply", "tank",
-        "shortage", "pressure", "contaminated", "purifier", "filter", "overflow",
-    ],
-    "electricity": [
-        "electricity", "power", "light", "bulb", "fan", "ac", "air condition",
-        "socket", "plug", "switch", "outage", "blackout", "voltage", "wiring",
-        "electrical", "generator",
     ],
     "hostel": [
         "hostel", "room", "bed", "mattress", "furniture", "cupboard", "wardrobe",
@@ -53,7 +54,9 @@ division_keywords = {
     ],
     "transport": [
         "transport", "bus", "vehicle", "driver", "route", "timing", "schedule",
-        "late", "delay", "shuttle", "pick", "drop", "parking",
+        "shuttle", "pick", "drop", "parking", "commute", "transportation",
+        "bus service", "bus timing", "bus driver", "bus route", "bus stop", "bus fare",
+        "auto", "cab", "taxi", "vehicle condition", "traffic", "accident",
     ],
     "library": [
         "library", "book", "journal", "reading", "study", "librarian",
@@ -65,7 +68,8 @@ division_keywords = {
     ],
     "infrastructure": [
         "building", "infrastructure", "construction", "repair", "maintenance",
-        "wall", "ceiling", "floor", "door", "window", "paint", "leak", "crack",
+        "wall", "ceiling", "floor", "door", "window", "paint", "crack",
+        "roof", "foundation", "structure",
     ],
 }
 
@@ -73,29 +77,60 @@ division_keywords = {
 @app.route('/api/categorize', methods=['POST'])
 def categorize():
     data = request.get_json() or {}
-    title = (data.get('title') or '') + ' ' + (data.get('description') or '')
-    text = title.lower()
+    title = (data.get('title') or '').strip()
+    description = (data.get('description') or '').strip()
+    full_text = title + ' ' + description
+    text = full_text.lower()
 
+    # CRITICAL: Check for harassment/safety issues first - ALWAYS HIGH PRIORITY
+    harassment_keywords = ["harassment", "molest", "threat", "intimidat", "bully", "harass", "unwanted", "assault", "abuse", "ragging", "bullying"]
+    is_harassment = any(kw in text for kw in harassment_keywords)
+    
     # Determine priority
-    priority = 'medium'
-    for kw in severity_keywords['high']:
-        if kw in text:
-            priority = 'high'
-            break
-    if priority != 'high':
-        for kw in severity_keywords['medium']:
+    if is_harassment:
+        # If harassment is detected, it's ALWAYS high priority - ZERO TOLERANCE
+        priority = 'high'
+        print(f"🚨 HARASSMENT DETECTED: Forcing HIGH priority for complaint about harassment/safety")
+    else:
+        priority = 'medium'
+        for kw in severity_keywords['high']:
             if kw in text:
-                priority = 'medium'
+                priority = 'high'
                 break
-        for kw in severity_keywords['low']:
-            if kw in text:
-                priority = 'low'
-                break
+        if priority != 'high':
+            for kw in severity_keywords['medium']:
+                if kw in text:
+                    priority = 'medium'
+                    break
+            for kw in severity_keywords['low']:
+                if kw in text:
+                    priority = 'low'
+                    break
 
-    # Determine division
+    # Context-aware scoring for better categorization
+    # Special handling for compound issues (e.g., water leak in electricity context)
+    def get_context_adjusted_score(div, text):
+        """Calculate score with context awareness"""
+        base_score = sum(1 for kw in division_keywords[div] if kw in text)
+        
+        # CRITICAL FIX: AC/Air Conditioner leaks should go to electricity, not water
+        if div == 'electricity' and ('ac' in text or 'air condition' in text) and ('leak' in text or 'leakage' in text):
+            base_score += 3  # High priority match
+        
+        # If both water AND electricity mentioned but AC/electrical appliance is context, prefer electricity
+        if div == 'electricity' and ('ac' in text or 'fan' in text or 'light' in text):
+            base_score *= 1.5
+        
+        # Infrastructure leak issues should not be water division issues
+        if div == 'infrastructure' and ('leak' in text or 'crack' in text or 'damage' in text):
+            base_score += 2
+        
+        return base_score
+
+    # Determine division with context awareness
     division_scores = {}
-    for div, keywords in division_keywords.items():
-        score = sum(1 for kw in keywords if kw in text)
+    for div in division_keywords.keys():
+        score = get_context_adjusted_score(div, text)
         if score > 0:
             division_scores[div] = score
     
@@ -105,6 +140,7 @@ def categorize():
     else:
         division = 'other'
 
+    print(f"Categorization Debug: title='{title}', division='{division}', priority='{priority}', scores={division_scores}")
     return jsonify({'priority': priority, 'division': division})
 
 

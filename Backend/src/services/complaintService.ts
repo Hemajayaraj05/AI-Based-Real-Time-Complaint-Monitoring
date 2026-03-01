@@ -63,6 +63,8 @@ const roleDivisionMap: Record<string, string> = {
   "hostel_manager": "hostel",
   "librarian": "library",
   "cafeteria_manager": "food",
+  "transport_manager": "transport",
+  // Note: "water", "infrastructure" map to admin if no specific role
 };
 
 // Keywords that indicate hostel-related context (override division categorization)
@@ -110,30 +112,28 @@ const findAssigneeForComplaint = async (
       console.log(`✓ Found ${specialistRole} (${specialist[0].email}) to handle "${actualDivision}" complaint`);
       return specialist[0].id;
     } else {
-      console.log(`⚠ No ${specialistRole} found for "${actualDivision}" division, falling back to division_head`);
+      console.log(`⚠ No ${specialistRole} found for "${actualDivision}" division, falling back to admin`);
     }
-  } else {
-    console.log(`⚠ No specialist mapping for division "${actualDivision}", falling back to division_head`);
   }
 
-  // Fallback to division_head if no specialist found
-  const { data: divisionHeads, error } = await supabase
+  // Fallback to admin for unassigned divisions (transport, water, infrastructure, other)
+  console.log(`⚠ No specialist mapping for division "${actualDivision}", assigning to admin`);
+  const { data: adminUsers, error: adminError } = await supabase
     .from<UserDB>("users")
     .select("id, role, email")
-    .eq("role", "division_head")
-    .eq("division", actualDivision)
+    .eq("role", "admin")
     .limit(1);
 
-  if (error) {
-    console.error(`Error finding division_head for "${actualDivision}":`, error);
+  if (adminError) {
+    console.error(`Error finding admin:`, adminError);
   }
 
-  if (divisionHeads && divisionHeads.length > 0) {
-    console.log(`✓ Found division_head (${divisionHeads[0].email}) to handle "${actualDivision}" complaint`);
-    return divisionHeads[0].id;
+  if (adminUsers && adminUsers.length > 0) {
+    console.log(`✓ Found admin (${adminUsers[0].email}) to handle "${actualDivision}" complaint`);
+    return adminUsers[0].id;
   }
 
-  console.log(`⚠ No assignee found for "${actualDivision}" division`);
+  console.log(`⚠ No assignee found for "${actualDivision}" division - leaving unassigned`);
   return null;
 };
 
@@ -179,7 +179,7 @@ export const createComplaint = async (
       })),
     ];
 
-    const { groups } = await findDuplicateComplaints(complaintsToCheck, 0.3);
+    const { groups } = await findDuplicateComplaints(complaintsToCheck, 0.75);
     
     console.log(`Clustering found ${groups.length} groups: ${JSON.stringify(groups.map(g => g.map((x: any) => x.id)))}`);
 
@@ -390,16 +390,16 @@ export const getAllComplaints = async (
   // Get unique user IDs
   const userIds = [...new Set(complaints.map(c => c.raised_by))];
   
-  // Fetch user names if role allows
-  let userMap = new Map<string, string>();
+  // Fetch user details if role allows
+  let userMap = new Map<string, { name: string; email: string; department: string }>();
   if (userRole === "admin" || userRole === "division_head") {
     const { data: users, error: userError } = await supabase
       .from<UserDB>("users")
-      .select("id, name")
+      .select("id, name, email, department")
       .in("id", userIds);
     
     if (userError) console.error("Error fetching users:", userError);
-    userMap = new Map(users?.map(u => [u.id, u.name]) || []);
+    userMap = new Map(users?.map(u => [u.id, { name: u.name, email: u.email, department: u.department || "N/A" }]) || []);
   }
 
   // Format based on role
@@ -408,7 +408,10 @@ export const getAllComplaints = async (
     
     // Only admins and division heads can see who raised the complaint
     if (userRole === "admin" || userRole === "division_head") {
-      formatted.raised_by_name = userMap.get(complaint.raised_by);
+      const userInfo = userMap.get(complaint.raised_by);
+      formatted.raised_by_name = userInfo?.name;
+      formatted.raised_by_email = userInfo?.email;
+      formatted.raised_by_department = userInfo?.department;
     }
 
     return formatted;
@@ -636,7 +639,7 @@ export const getMonthlyComplaintTrends = async (
     if (!complaint.created_at) return;
     
     const created = new Date(complaint.created_at);
-    const createdYearMonth = `${created.getUTCFullYear()}-${String(created.getUTCMonth()).padStart(2, '0')}`;
+    const createdYearMonth = `${created.getUTCFullYear()}-${String(created.getUTCMonth() + 1).padStart(2, '0')}`;
     
     if (!bucket[createdYearMonth]) {
       bucket[createdYearMonth] = { resolved: 0, pending: 0, in_progress: 0 };
@@ -660,7 +663,7 @@ export const getMonthlyComplaintTrends = async (
   }
 
   const points: MonthlyComplaintAnalysisPoint[] = months.map((date, index) => {
-    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth()).padStart(2, '0')}`;
+    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
     const counts = bucket[key] || { resolved: 0, pending: 0, in_progress: 0 };
     return {
       month: formatMonthLabel(date),
@@ -768,8 +771,8 @@ export const reclusterAllComplaints = async (): Promise<{ clustered: number; gro
       id: c.id,
     }));
 
-    // Use aggressive threshold (0.3) for clustering similar complaints
-    const { groups } = await findDuplicateComplaints(complaintsToCheck, 0.3);
+    // Use stricter threshold (0.75) for accurate clustering - only truly similar complaints
+    const { groups } = await findDuplicateComplaints(complaintsToCheck, 0.75);
 
     if (groups.length === 0) {
       console.log(`   No clusters found in ${division}`);

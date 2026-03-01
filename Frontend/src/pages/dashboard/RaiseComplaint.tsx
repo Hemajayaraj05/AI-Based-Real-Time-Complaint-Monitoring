@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { SendIcon, LockIcon } from "../../components/icons/IconComponents";
+import { showToast } from "../../utils/toast";
 
 interface ComplaintFormData {
   title: string;
@@ -15,17 +16,15 @@ const RaiseComplaint = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     if (!form.title || !form.description) {
-      setError("Please fill all required fields");
+      showToast.error("Please fill all required fields");
       return;
     }
 
@@ -50,10 +49,10 @@ const RaiseComplaint = () => {
         throw new Error(payload.message || "Failed to submit complaint");
       }
 
-      alert("Complaint submitted successfully.");
+      showToast.success("Complaint submitted successfully!");
       navigate("/dashboard/my");
     } catch (err: any) {
-      setError(err.message || "Submission failed. Please try again.");
+      showToast.error(err.message || "Submission failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -77,12 +76,6 @@ const RaiseComplaint = () => {
         <div className="bg-white rounded-xl lg:rounded-2xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden border border-purple-100">
           {/* Form Content */}
           <form onSubmit={handleSubmit} className="p-8 lg:p-10">
-            {error && (
-              <div className="mb-8 p-5 lg:p-6 bg-red-50 border-2 border-red-200 rounded-xl text-red-700 text-base lg:text-lg font-medium flex items-start gap-3">
-                <span className="text-xl shrink-0">⚠️</span>
-                <span>{error}</span>
-              </div>
-            )}
 
             {/* Title Field */}
             <div className="mb-8 lg:mb-10">

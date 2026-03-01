@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { getDivisionIcon, getDivisionColor, CheckCircleIcon, AlertIcon, ClockIcon } from "../../components/icons/IconComponents";
+import { getDivisionIcon, getDivisionColor, CheckCircleIcon, AlertIcon } from "../../components/icons/IconComponents";
+import { showToast } from "../../utils/toast";
 
 type Complaint = {
   id: string;
@@ -17,7 +18,6 @@ type Complaint = {
 const MyComplaints: React.FC = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchMine = async () => {
@@ -34,7 +34,7 @@ const MyComplaints: React.FC = () => {
         const payload = await res.json();
         setComplaints(payload.complaints || []);
       } catch (err: any) {
-        setError(err.message || "Error fetching complaints");
+        showToast.error(err.message || "Error fetching complaints");
       } finally {
         setLoading(false);
       }
@@ -64,12 +64,6 @@ const MyComplaints: React.FC = () => {
         <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-2">My Complaints</h1>
         <p className="text-slate-500 text-base lg:text-lg">Track and manage the status of your submitted complaints</p>
       </div>
-
-      {error && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 md:p-6 text-red-700 font-medium">
-          ⚠️ {error}
-        </div>
-      )}
 
       {/* In Progress / Pending */}
       <div>

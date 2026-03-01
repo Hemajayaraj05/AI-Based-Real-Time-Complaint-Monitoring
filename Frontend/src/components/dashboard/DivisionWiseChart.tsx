@@ -103,6 +103,7 @@ const DivisionWiseChart: React.FC = () => {
                 fill="#a855f7"
                 radius={[8, 8, 0, 0]}
                 animationDuration={800}
+                label={{ position: 'top', fill: '#1e293b', fontSize: 12, fontWeight: 'bold' }}
               />
             </BarChart>
           </ResponsiveContainer>

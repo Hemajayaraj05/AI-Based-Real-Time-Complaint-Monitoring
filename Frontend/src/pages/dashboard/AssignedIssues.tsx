@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getDivisionIcon, getDivisionColor, ChevronDownIcon, LinkIcon } from "../../components/icons/IconComponents";
+import { showToast } from "../../utils/toast";
 
 type Complaint = {
   id: string;
@@ -105,7 +106,9 @@ const AssignedIssues: React.FC = () => {
       const result = await res.json();
 
       if (result.cascaded > 0) {
-        alert(`✅ ${result.message}`);
+        showToast.success(`Status updated! ${result.cascaded} similar complaints also updated.`);
+      } else {
+        showToast.success(result.message || "Status updated successfully!");
       }
 
       setIssues((prev) =>
@@ -130,7 +133,7 @@ const AssignedIssues: React.FC = () => {
         }));
       }
     } catch (err: any) {
-      alert(err.message || "Failed to update status");
+      showToast.error(err.message || "Failed to update status");
     } finally {
       setUpdatingId(null);
     }

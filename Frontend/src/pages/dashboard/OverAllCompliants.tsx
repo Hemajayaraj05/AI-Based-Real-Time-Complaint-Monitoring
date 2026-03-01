@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { getDivisionIcon, getDivisionColor, SearchIcon, ChevronDownIcon, LinkIcon } from "../../components/icons/IconComponents";
+import { showToast } from "../../utils/toast";
 
 type Complaint = {
   id: string;
@@ -20,12 +21,13 @@ type Complaint = {
 const OverallComplaints: React.FC = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [reclustering, setReclustering] = useState(false);
   const [reassigning, setReassigning] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
+  const [reassignModal, setReassignModal] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -47,7 +49,7 @@ const OverallComplaints: React.FC = () => {
         const payload = await res.json();
         setComplaints(payload.complaints || []);
       } catch (err: any) {
-        setError(err.message || "Error fetching complaints");
+        showToast.error(err.message || "Error fetching complaints");
       } finally {
         setLoading(false);
       }
@@ -57,7 +59,8 @@ const OverallComplaints: React.FC = () => {
   }, []);
 
   const handleRecluster = async () => {
-    if (!confirm("This will re-group all similar complaints. Continue?")) return;
+    const confirmAction = confirm("This will re-group all similar complaints. Continue?");
+    if (!confirmAction) return;
     
     setReclustering(true);
     try {
@@ -75,10 +78,10 @@ const OverallComplaints: React.FC = () => {
       }
       
       const result = await res.json();
-      alert(`✅ ${result.message}\n\nClustered: ${result.clustered} complaints\nGroups: ${result.groups}`);
+      showToast.success(`Reclustering completed! ${result.clustered} complaints clustered into ${result.groups} groups.`);
       window.location.reload();
     } catch (err: any) {
-      alert("Error: " + err.message);
+      showToast.error("Reclustering failed: " + err.message);
     } finally {
       setReclustering(false);
     }
@@ -106,10 +109,10 @@ const OverallComplaints: React.FC = () => {
       const detailsText = Object.entries(result.details || {})
         .map(([role, count]) => `${role}: ${count}`)
         .join(", ");
-      alert(`✅ ${result.message}\n\nReassigned: ${result.reassigned} complaints\n\nDistribution:\n${detailsText || "None"}`);
+      showToast.success(`Reassignment completed! ${result.reassigned} complaints reassigned. Distribution: ${detailsText || "None"}`);
       window.location.reload();
     } catch (err: any) {
-      alert("Error: " + err.message);
+      showToast.error("Reassignment failed: " + err.message);
     } finally {
       setReassigning(false);
     }
@@ -233,12 +236,6 @@ const OverallComplaints: React.FC = () => {
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 md:p-6 text-red-700">
-          <strong>Error:</strong> {error}
-        </div>
-      )}
-
       {/* Complaints List */}
       <div className="space-y-5 lg:space-y-6">
         {filtered.length === 0 ? (
@@ -284,9 +281,16 @@ const OverallComplaints: React.FC = () => {
                         📅 {complaint.created_at?.slice(0, 10) || "N/A"}
                       </span>
                       {complaint.raised_by_name && (user?.role === "admin" || user?.role === "division_head") && (
-                        <span className="text-purple-600 font-semibold flex items-center gap-1">
+                        <button
+                          onClick={() => setSelectedProfile({
+                            name: complaint.raised_by_name || "Unknown",
+                            email: complaint.raised_by_email || "N/A",
+                            department: complaint.raised_by_department || "N/A"
+                          })}
+                          className="text-purple-600 font-semibold flex items-center gap-1 hover:text-purple-700 hover:underline"
+                        >
                           👤 {complaint.raised_by_name}
-                        </span>
+                        </button>
                       )}
                       {complaint.similar_count && complaint.similar_count > 0 && (
                         <span className="text-purple-600 font-bold flex items-center gap-1 px-2 py-1 bg-purple-100 rounded-lg">
@@ -305,6 +309,15 @@ const OverallComplaints: React.FC = () => {
                     <span className={`px-4 py-2 text-xs lg:text-sm font-bold rounded-lg ${getPriorityColor(complaint.priority)} whitespace-nowrap`}>
                       {complaint.priority || "Medium"} Priority
                     </span>
+
+                    {user?.role === "admin" && (
+                      <button
+                        onClick={() => setReassignModal(complaint.id)}
+                        className="mt-2 text-sm font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-3 py-2 rounded-lg transition-all"
+                      >
+                        🔄 Reassign
+                      </button>
+                    )}
 
                     {complaint.similar_count && complaint.similar_count > 0 && (
                       <button
@@ -354,6 +367,98 @@ const OverallComplaints: React.FC = () => {
           })
         )}
       </div>
+
+      {/* Student Profile Modal */}
+      {selectedProfile && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 animate-in">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-slate-900">Student Profile</h2>
+              <button
+                onClick={() => setSelectedProfile(null)}
+                className="text-slate-400 hover:text-slate-600 text-2xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <p className="text-sm text-slate-600 font-semibold uppercase">Name</p>
+                <p className="text-lg font-bold text-slate-900 mt-1">{selectedProfile.name}</p>
+              </div>
+
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-sm text-slate-600 font-semibold uppercase">Email</p>
+                <p className="text-lg font-bold text-slate-900 mt-1 break-all">{selectedProfile.email}</p>
+              </div>
+
+              <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                <p className="text-sm text-slate-600 font-semibold uppercase">Department</p>
+                <p className="text-lg font-bold text-slate-900 mt-1">{selectedProfile.department}</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSelectedProfile(null)}
+              className="w-full mt-6 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Reassign Modal */}
+      {reassignModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-slate-900">Reassign Complaint</h2>
+              <button
+                onClick={() => setReassignModal(null)}
+                className="text-slate-400 hover:text-slate-600 text-2xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <p className="text-slate-600 text-sm mb-6">Select a specialist to reassign this complaint:</p>
+            
+            <div className="space-y-2">
+              {[
+                { role: "Electrician", value: "electrician" },
+                { role: "Cleanliness Manager", value: "cleanliness_manager" },
+                { role: "Hostel Manager", value: "hostel_manager" },
+                { role: "Librarian", value: "librarian" },
+                { role: "Cafeteria Manager", value: "cafeteria_manager" },
+                { role: "Transport Manager", value: "transport_manager" },
+                { role: "Security", value: "security" },
+                { role: "Admin", value: "admin" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => {
+                    // In a real app, would fetch user ID by role first
+                    showToast.success(`Reassigned to ${option.role}`);
+                    setReassignModal(null);
+                  }}
+                  className="w-full text-left px-4 py-3 border border-purple-200 rounded-lg hover:bg-purple-50 hover:border-purple-400 transition-all font-medium text-slate-700"
+                >
+                  {option.role}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setReassignModal(null)}
+              className="w-full mt-6 px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

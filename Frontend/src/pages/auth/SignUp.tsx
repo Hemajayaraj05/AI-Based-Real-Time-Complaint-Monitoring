@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, UserRole } from "../../context/AuthContext";
-import axios from "axios";
+import { showToast } from "../../utils/toast";
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
@@ -15,14 +15,11 @@ const Signup: React.FC = () => {
     password: "",
   });
 
-  const [error, setError] = useState("");
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    setError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,21 +31,22 @@ const Signup: React.FC = () => {
       !formData.department ||
       !formData.password
     ) {
-      setError("Please fill in all fields");
+      showToast.error("Please fill in all fields");
       return;
     }
 
     try {
-      await axios.post("http://localhost:4000/api/auth/signup", {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      department: formData.department,
-      role: formData.role,
-    });
+      await signup(
+        formData.name,
+        formData.email,
+        formData.password,
+        formData.department,
+        formData.role
+      );
+      showToast.success("Account created successfully! Redirecting to login...");
       navigate("/login");
     } catch (err: any) {
-      setError(err.message || "Signup failed");
+      showToast.error(err.message || "Signup failed");
     }
   };
 
@@ -70,12 +68,6 @@ const Signup: React.FC = () => {
             </h1>
             <p className="text-gray-500 text-sm">Create Account</p>
           </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-              {error}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -142,6 +134,7 @@ const Signup: React.FC = () => {
                 <option value="electrician">Electrician</option>
                 <option value="cleanliness_manager">Cleanliness Manager</option>
                 <option value="hostel_manager">Hostel Manager</option>
+                <option value="transport_manager">Transport/Bus Manager</option>
                 <option value="librarian">Librarian</option>
                 <option value="cafeteria_manager">Cafeteria Manager</option>
                 <option value="exam_coordinator">Exam Coordinator</option>
