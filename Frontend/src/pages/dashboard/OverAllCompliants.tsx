@@ -12,6 +12,8 @@ type Complaint = {
   priority: string;
   created_at?: string;
   raised_by_name?: string;
+  raised_by_email?: string;
+  raised_by_department?: string;
   cluster_id?: string | null;
   similar_count?: number;
   similar_ids?: string[];
@@ -26,7 +28,7 @@ const OverallComplaints: React.FC = () => {
   const [filter, setFilter] = useState("all");
   const [reclustering, setReclustering] = useState(false);
   const [reassigning, setReassigning] = useState(false);
-  const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
+  const [expandedProfileId, setExpandedProfileId] = useState<string | null>(null);
   const [reassignModal, setReassignModal] = useState<string | null>(null);
   const { user } = useAuth();
 
@@ -47,6 +49,8 @@ const OverallComplaints: React.FC = () => {
         }
         
         const payload = await res.json();
+        console.log("🔍 Complaints payload:", payload);
+        console.log("📊 Complaints with clustering:", payload.complaints);
         setComplaints(payload.complaints || []);
       } catch (err: any) {
         showToast.error(err.message || "Error fetching complaints");
@@ -282,11 +286,9 @@ const OverallComplaints: React.FC = () => {
                       </span>
                       {complaint.raised_by_name && (user?.role === "admin" || user?.role === "division_head") && (
                         <button
-                          onClick={() => setSelectedProfile({
-                            name: complaint.raised_by_name || "Unknown",
-                            email: complaint.raised_by_email || "N/A",
-                            department: complaint.raised_by_department || "N/A"
-                          })}
+                          onClick={() =>
+                            setExpandedProfileId(expandedProfileId === complaint.id ? null : complaint.id)
+                          }
                           className="text-purple-600 font-semibold flex items-center gap-1 hover:text-purple-700 hover:underline"
                         >
                           👤 {complaint.raised_by_name}
@@ -299,6 +301,26 @@ const OverallComplaints: React.FC = () => {
                         </span>
                       )}
                     </div>
+
+                    {expandedProfileId === complaint.id && complaint.raised_by_name && (
+                      <div className="mt-4 rounded-xl border border-purple-200 bg-purple-50 p-4">
+                        <h4 className="text-sm font-bold text-slate-900 mb-3">Student Details</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                          <div className="bg-white border border-purple-200 rounded-lg p-3">
+                            <p className="text-xs text-slate-500 font-semibold uppercase">Name</p>
+                            <p className="text-slate-900 font-semibold mt-1">{complaint.raised_by_name}</p>
+                          </div>
+                          <div className="bg-white border border-purple-200 rounded-lg p-3">
+                            <p className="text-xs text-slate-500 font-semibold uppercase">Email</p>
+                            <p className="text-slate-900 font-semibold mt-1 break-all">{complaint.raised_by_email || "N/A"}</p>
+                          </div>
+                          <div className="bg-white border border-purple-200 rounded-lg p-3">
+                            <p className="text-xs text-slate-500 font-semibold uppercase">Department</p>
+                            <p className="text-slate-900 font-semibold mt-1">{complaint.raised_by_department || "N/A"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Status & Priority */}
@@ -367,47 +389,6 @@ const OverallComplaints: React.FC = () => {
           })
         )}
       </div>
-
-      {/* Student Profile Modal */}
-      {selectedProfile && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 animate-in">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-slate-900">Student Profile</h2>
-              <button
-                onClick={() => setSelectedProfile(null)}
-                className="text-slate-400 hover:text-slate-600 text-2xl font-bold"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                <p className="text-sm text-slate-600 font-semibold uppercase">Name</p>
-                <p className="text-lg font-bold text-slate-900 mt-1">{selectedProfile.name}</p>
-              </div>
-
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <p className="text-sm text-slate-600 font-semibold uppercase">Email</p>
-                <p className="text-lg font-bold text-slate-900 mt-1 break-all">{selectedProfile.email}</p>
-              </div>
-
-              <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
-                <p className="text-sm text-slate-600 font-semibold uppercase">Department</p>
-                <p className="text-lg font-bold text-slate-900 mt-1">{selectedProfile.department}</p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setSelectedProfile(null)}
-              className="w-full mt-6 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Reassign Modal */}
       {reassignModal && (

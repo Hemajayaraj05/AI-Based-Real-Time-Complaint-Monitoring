@@ -179,7 +179,7 @@ export const createComplaint = async (
       })),
     ];
 
-    const { groups } = await findDuplicateComplaints(complaintsToCheck, 0.75);
+    const { groups } = await findDuplicateComplaints(complaintsToCheck, 0.5);
     
     console.log(`Clustering found ${groups.length} groups: ${JSON.stringify(groups.map(g => g.map((x: any) => x.id)))}`);
 
@@ -625,20 +625,20 @@ export const getMonthlyComplaintTrends = async (
   if (error) throw error;
 
   console.log(`[Monthly Analysis] Fetched ${data?.length || 0} complaints from ${start.toISOString()}`);
-  
-  // Log unique statuses found
-  const statuses = new Set<string>();
-  (data || []).forEach(c => {
-    if (c.status) statuses.add(c.status);
-  });
-  console.log(`[Monthly Analysis] Statuses found in DB:`, Array.from(statuses));
 
   const bucket: Record<string, { resolved: number; pending: number; in_progress: number }> = {};
 
   (data || []).forEach((complaint) => {
     if (!complaint.created_at) return;
-    
-    const created = new Date(complaint.created_at);
+
+    let created = new Date(complaint.created_at);
+    if (Number.isNaN(created.getTime())) {
+      created = new Date(`${complaint.created_at}T00:00:00Z`);
+    }
+    if (Number.isNaN(created.getTime())) {
+      return;
+    }
+
     const createdYearMonth = `${created.getUTCFullYear()}-${String(created.getUTCMonth() + 1).padStart(2, '0')}`;
     
     if (!bucket[createdYearMonth]) {
@@ -665,6 +665,7 @@ export const getMonthlyComplaintTrends = async (
   const points: MonthlyComplaintAnalysisPoint[] = months.map((date, index) => {
     const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
     const counts = bucket[key] || { resolved: 0, pending: 0, in_progress: 0 };
+
     return {
       month: formatMonthLabel(date),
       resolved: counts.resolved,
@@ -673,8 +674,6 @@ export const getMonthlyComplaintTrends = async (
       predicted: index >= actualMonths,
     };
   });
-
-  console.log(`[Monthly Analysis] Final points:`, JSON.stringify(points.slice(0, 3), null, 2));
 
   // Add predictions
   if (predict > 0) {
@@ -771,8 +770,8 @@ export const reclusterAllComplaints = async (): Promise<{ clustered: number; gro
       id: c.id,
     }));
 
-    // Use stricter threshold (0.75) for accurate clustering - only truly similar complaints
-    const { groups } = await findDuplicateComplaints(complaintsToCheck, 0.75);
+    // Use moderate threshold (0.5) for better clustering - catch similar complaints
+    const { groups } = await findDuplicateComplaints(complaintsToCheck, 0.5);
 
     if (groups.length === 0) {
       console.log(`   No clusters found in ${division}`);
@@ -962,4 +961,5 @@ export const reassignAllComplaints = async (): Promise<{ reassigned: number; det
   console.log("=".repeat(60));
   return { reassigned: reassignedCount, details };
 };
+
 

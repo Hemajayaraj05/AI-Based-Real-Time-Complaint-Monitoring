@@ -19,7 +19,7 @@ const DashboardHome: React.FC = () => {
       {/* Welcome Section */}
       <div className="bg-linear-to-r from-purple-600 to-purple-700 rounded-2xl lg:rounded-3xl p-6 sm:p-8 lg:p-10 text-white shadow-lg">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 leading-tight">
-          {getGreeting()}, <span className="text-purple-100">{user?.name?.split(" ")[0]}</span>! 👋
+          {getGreeting()}, <span className="text-purple-100">{user?.name?.split(" ")[0]}</span>! 
         </h1>
         <p className="text-purple-100 text-base sm:text-lg lg:text-lg leading-relaxed max-w-2xl">
           {user?.role === "admin" && "Monitor and manage all complaints across divisions"}

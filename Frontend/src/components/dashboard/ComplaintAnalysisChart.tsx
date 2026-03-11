@@ -38,7 +38,7 @@ const ComplaintAnalysisChart: React.FC = () => {
     const fetchMonthlyData = async () => {
       try {
         const token = localStorage.getItem("authToken");
-        const res = await fetch("http://localhost:4000/api/complaints/analysis/monthly?months=10&predict=3", {
+        const res = await fetch("http://localhost:4000/api/complaints/analysis/monthly?months=10&predict=0", {
           headers: {
             Authorization: token ? `Bearer ${token}` : "",
           },
@@ -46,6 +46,7 @@ const ComplaintAnalysisChart: React.FC = () => {
         if (res.ok) {
           const result = await res.json();
           console.log("Monthly analysis API response:", result);
+          console.log("Chart data points:", result.data);
           setChartData(result.data || []);
         } else {
           console.error("API responded with status:", res.status);
